@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+<form action="/Studentcontroller" name="sc">
+<input type="text" name="sid">student-id<br>
+<input type="text" name="sname">student-name<br>
+<input type="text" name="doj">date-of-joining<br>
+<input type="submit" value="add">
+</form>
+</body>
+</html>

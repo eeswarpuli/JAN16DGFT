@@ -1,0 +1,2472 @@
+package com.accenture.adf.businesstier.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.accenture.adf.businesstier.entity.Event;
+import com.accenture.adf.businesstier.entity.EventCoordinator;
+import com.accenture.adf.businesstier.entity.Visitor;
+import com.accenture.adf.businesstier.service.EventFacade;
+import com.accenture.adf.businesstier.service.EventServiceImpl;
+import com.accenture.adf.exceptions.FERSGenericException;
+
+/**
+ * 
+ * @author krishna.x.kishore This controller will handle all event related
+ *         activities for a new visitor 
+ * 
+ */
+
+@Controller
+public class EventController {
+
+	private static Logger log = Logger.getLogger(EventController.class);
+
+	/**
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 *             The method will display all the events available in the
+	 *             catalog to the visitor
+	 */
+	@RequestMapping("/catalog.htm")
+	public ModelAndView getAvailableEvents(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("request or response not valid in GETAVAILABLEEVENTS METHOD ");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+		eventList = serviceImpl.getAllEvents();
+
+		log.info("All Events are listed :" + eventList);
+		
+		HttpSession hs = request.getSession();
+		Visitor visitor = (Visitor)hs.getAttribute("VISITOR");
+		
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("allEvents", eventList);
+		mv.addObject("visitor",visitor);
+		mv.setViewName("/eventCatalog.jsp");
+		return mv;
+	}
+
+	/**
+	 * This method deletes the event from database
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/deleteEvent.htm")
+	public ModelAndView deleteEvent(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("request or response not valid in DELTEEVENT METHOD ");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		String eventId = request.getParameter("eventId");
+		String sessionId = request.getParameter("sessionId");
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+		serviceImpl.deleteEvent(Integer.parseInt(eventId), Integer.parseInt(sessionId));	
+		eventList = serviceImpl.getAllEvents();
+		
+		HttpSession hs = request.getSession();
+		Visitor visitor = (Visitor)hs.getAttribute("VISITOR");
+		
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("allEvents", eventList);
+		mv.addObject("visitor",visitor);
+		mv.setViewName("/eventCatalog.jsp");
+		return mv;
+	}
+
+	/**
+	 * This method displays the add/update event page
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/displayEvent.htm")
+	public ModelAndView displayEvent(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("request or response not valid in DISPLAYEVENT METHOD ");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		String eventId = request.getParameter("eventId");
+		String sessionId = request.getParameter("sessionId");	
+		
+		EventFacade serviceImpl = new EventServiceImpl();
+		List<EventCoordinator> eventCoordinator = serviceImpl.getAllEventCoordinators();
+		Event event;
+		if (eventId.equals("-1")) {
+			event = new Event();
+			event.setAdd(true);
+		} else {
+			event = serviceImpl.getEvent(Integer.parseInt(eventId),
+					Integer.parseInt(sessionId));
+		}
+
+		log.info("Displaying event for eventId:" + eventId);
+		
+		HttpSession hs = request.getSession();
+		Visitor visitor = (Visitor)hs.getAttribute("VISITOR");
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("event", event);
+		mv.addObject("eventCoordinator", eventCoordinator);
+		mv.addObject("visitor",visitor);
+		mv.setViewName("/addEvent.jsp");
+		return mv;
+	}
+
+	/**
+	 * This method updates the event
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/updateEvent.htm")
+	public ModelAndView updateEvent(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+		String statusString = "";
+		if (request == null || response == null) {
+			log.info("request or response not valid in UPDATEEVENT METHOD ");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+		String eventId = request.getParameter("eventId");
+		String sessionId = request.getParameter("sessionId");
+		String eventName = request.getParameter("eventName");
+		String desc = request.getParameter("desc");
+		String place = request.getParameter("place");
+		String duration = request.getParameter("duration");
+		String eventType = request.getParameter("eventType");
+		String ticket = request.getParameter("ticket");
+		String isAdd = request.getParameter("isAdd");			
+		
+		Event updatedEvent = new Event();
+		updatedEvent.setEventid(Integer.parseInt(eventId));
+		updatedEvent.setEventtype(eventType);
+		updatedEvent.setName(eventName);
+		updatedEvent.setDescription(desc);
+		updatedEvent.setPlace(place);
+		updatedEvent.setDuration(duration);
+		updatedEvent.setSeatsavailable(ticket);
+		updatedEvent.setSessionId(Integer.parseInt(sessionId));
+		
+		EventFacade serviceImpl = new EventServiceImpl();
+		int status = -99;
+		if(isAdd.equals("true")){
+			String eventCoordinatorId = request.getParameter("coordinator");
+			String eventSession = request.getParameter("eventSession");
+			updatedEvent.setEventCoordinatorId(Integer.parseInt(eventCoordinatorId));
+			updatedEvent.setEventSession(Integer.parseInt(eventSession));	
+			updatedEvent.setAdd(true);
+			status = serviceImpl.insertEvent(updatedEvent);
+			statusString = "Event added Succesfully !!!";
+		} 
+		else{
+			status = serviceImpl.updateEvent(updatedEvent);
+			statusString = "Event updated Succesfully !!!";
+		}	
+		
+		List<EventCoordinator> eventCoordinatorList = serviceImpl.getAllEventCoordinators();
+		ModelAndView mv = new ModelAndView();
+
+		if (status > 0) {
+			mv.addObject("REGISTRATIONSTATUSMESSAGE",statusString);
+			log.info(statusString);
+
+		} else if (status == 0) {
+			mv.addObject("REGISTRATIONSTATUSMESSAGE",
+					"There was error while saving the event. Please see log file for more details..");
+			log.info("There was error while saving the event. Please see log file for more details..");
+		}
+
+		mv.addObject("event", updatedEvent);
+		mv.addObject("eventCoordinator", eventCoordinatorList);
+		mv.setViewName("/addEvent.jsp");
+		return mv;
+	}
+
+}
+-------------------------------------------------------------------------------
+package com.accenture.adf.businesstier.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.accenture.adf.businesstier.entity.Event;
+import com.accenture.adf.businesstier.entity.Visitor;
+import com.accenture.adf.businesstier.service.EventFacade;
+import com.accenture.adf.businesstier.service.EventServiceImpl;
+import com.accenture.adf.businesstier.service.VisitorFacade;
+import com.accenture.adf.businesstier.service.VisitorServiceImpl;
+import com.accenture.adf.exceptions.FERSGenericException;
+
+/**
+ * <br/>
+ * CLASS DESCRIPTION: <br/>
+ * 
+ * A controller class for receiving and handling all visitor related
+ * transactions from the User Interface including visitor account access,
+ * visitor account maintenance, and visitor event registration requests. <br/>
+ * 
+ *  @author krishna.kishore
+ * 
+ */
+
+@Controller
+public class VisitorController {
+
+	private static Logger log = Logger.getLogger(VisitorController.class);
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method will register new Visitor into system by accepting his
+	 * details and load into database <br/>
+	 * 
+	 * @return ModelAndView
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 * 
+	 */
+	@RequestMapping("/newVistor.htm")
+	public ModelAndView newVisitor(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+		if (request == null || response == null) {
+			log.info("Request or Response failed for NEWVISITOR METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+		String username = request.getParameter("USERNAME");
+		String password = request.getParameter("PASSWORD");
+		String firstname = request.getParameter("FIRSTNAME");
+		String lastname = request.getParameter("LASTNAME");
+		String email = request.getParameter("EMAIL");
+		String phoneno = request.getParameter("PHONENO");
+		String place = request.getParameter("ADDRESS");
+
+		log.info("creating new visitor with UserName :" + username);
+
+		Visitor visitor = new Visitor();
+		visitor.setUserName(username);
+		visitor.setPassword(password);
+		visitor.setFirstName(firstname);
+		visitor.setLastName(lastname);
+		visitor.setEmail(email);
+		visitor.setPhoneNumber(phoneno);
+		visitor.setAddress(place);
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+		boolean insertStatus = vServiceImpl.createVisitor(visitor);
+	ModelAndView mv = new ModelAndView();
+		if (insertStatus == true) {
+			mv.addObject("REGISTRATIONSTATUSMESSAGE",
+					"User Registered Succesfully !!!");
+			log.info("Succesfully created visitor " + username);
+			mv.setViewName("/registration.jsp");
+		} else {
+			mv.addObject("REGISTRATIONSTATUSMESSAGE",
+					"USERNAME already exists.. please register again with different USERNAME..");
+			log.info("Username " + username
+					+ " already exists and visitor creation failed..");
+			mv.setViewName("/registration.jsp");
+		}
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for validating visitor in the first page and redirects to
+	 * visitor homepage based on credentials. if validation fails, error message
+	 * is printed on same screen <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+
+	@RequestMapping("/searchVisitor.htm")
+	public ModelAndView searchVisitor(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+		if (request == null || response == null) {
+			log.info("Request or Response failed for SEARCHVISITOR METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+		String username = request.getParameter("USERNAME");
+		String password = request.getParameter("PASSWORD");
+		HttpSession hs = request.getSession();
+		if (hs.isNew()) {
+			hs.setAttribute("USERNAME", username);
+			hs.setAttribute("PASSWORD", password);
+		} else {
+			username = hs.getAttribute("USERNAME").toString();
+			password = hs.getAttribute("PASSWORD").toString();
+		}
+
+		log.info("Logging into FERS using username :" + username
+				+ " and password :" + password);
+
+		Visitor visitor = new Visitor();
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+		visitor = vServiceImpl.searchVisitor(username, password);
+		if(visitor.getVisitorId() == 1007)
+		{
+			visitor.setAdmin(true);
+		}
+			
+		ModelAndView mv = new ModelAndView();
+
+		if (visitor.getVisitorId() == 0) {
+			mv.addObject("ERROR", "Invalid Username / Password.");
+			mv.setViewName("/index.jsp");
+			return mv;
+		} else {
+
+			log.info("Visitor details available for the username :" + username);
+
+			HttpSession session = request.getSession();
+
+			List<Object[]> eventList = new ArrayList<Object[]>();
+			EventFacade serviceImpl = new EventServiceImpl();
+			eventList = serviceImpl.getAllEvents();
+
+			log.info("All events listed for the visitor :" + eventList);
+
+			List<Object[]> regList = new ArrayList<Object[]>();
+			regList = vServiceImpl.showRegisteredEvents(visitor);
+
+			log.info("All Registered events listed for the visitor :" + regList);
+
+			session.setAttribute("VISITOR", visitor);
+
+			mv.addObject("visitor", visitor);
+			mv.addObject("allEvents", eventList);
+			mv.addObject("regEvents", regList);
+			mv.setViewName("/visitormain.jsp");
+			return mv;
+		}
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is used to register specific event by visitor and
+	 * maintains list of all the events visitor selected. if user
+	 * already registered for event then displays relavent error
+	 * message <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+
+	@RequestMapping("/eventreg.htm")
+	public ModelAndView registerVisitor(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for REGISTERVISITOR METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+		int eventid = Integer.parseInt(request.getParameter("eventId"));
+		int sessionid = Integer.parseInt(request.getParameter("sessionId"));
+
+		log.info("Visitor registered for the event :" + eventid);
+
+		ModelAndView mv = new ModelAndView();
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		boolean regStatus = serviceImpl.checkEventsofVisitor(visitor, eventid,
+				sessionid);
+
+		log.info("Status of the visitor for the event :" + regStatus);
+
+		if (regStatus == false) {
+			vServiceImpl.RegisterVisitor(visitor, eventid, sessionid);
+			log.info("Visitor succesfully registed for event :" + eventid);
+		} else {
+			mv.addObject("RegError",
+					"User already Registered for the EVENT for same Session !!");
+		}
+
+		List<Object[]> regList = new ArrayList<Object[]>();
+		regList = vServiceImpl.showRegisteredEvents(visitor);
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+
+		eventList = serviceImpl.getAllEvents();
+
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.addObject("regEvents", regList);
+		mv.setViewName("/visitormain.jsp");
+		return mv;
+
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method will update details of the visitor and enables
+	 * visitor to logout and re-login with updated details <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 * 
+	 */
+
+	@RequestMapping("/updatevisitor.htm")
+	public ModelAndView updateVisitor(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UPDATEVISITOR METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+
+		log.info("Updating visitor details with VisitorID :"
+				+ visitor.getVisitorId());
+
+		String username = request.getParameter("username");
+		//String password = request.getParameter("password");
+		String firstname = request.getParameter("firstname");
+		String lastname = request.getParameter("lastname");
+		String email = request.getParameter("email");
+		String phoneno = request.getParameter("phoneno");
+		String place = request.getParameter("address");
+
+		visitor.setFirstName(firstname);
+		visitor.setLastName(lastname);
+		visitor.setUserName(username);
+		//visitor.setPassword(password);
+		visitor.setEmail(email);
+		visitor.setPhoneNumber(phoneno);
+		visitor.setAddress(place);
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+		int status = vServiceImpl.updateVisitorDetails(visitor);
+
+		log.info("Number of Visitor records updated is :" + status);
+
+		ModelAndView mv = new ModelAndView();
+
+		if (status > 0) {
+			mv.addObject("status", "success");
+			mv.setViewName("/updatevisitor.jsp");
+		} else {
+			mv.addObject("updatestatus",
+					"Error in updation.. Please Check fields and retry");
+			mv.setViewName("/updatevisitor.jsp");
+		}
+		return mv;
+	}
+	
+	@RequestMapping("/changePWD.htm")
+	public ModelAndView changePassword(HttpServletRequest request, HttpServletResponse response) {
+		 int status = -1;
+		 
+		HttpSession session=request.getSession();
+		Visitor visitor=(Visitor)session.getAttribute("VISITOR");
+		
+		if(visitor != null){
+			log.info("Changing visitor password with VisitorID :"+visitor.getVisitorId());
+			
+			String password=request.getParameter("password");
+			
+			if(password != null){
+				visitor.setPassword(password);		
+				
+				VisitorFacade vServiceImpl=new VisitorServiceImpl();
+				
+				try {
+					status=vServiceImpl.changePassword(visitor);
+				} catch (FERSGenericException e) {					
+					status = -5;
+					log.error(e.getMessage(), e);
+				}
+			}else{
+				log.error("Password cannot be blank");
+			}
+			
+			log.info("Visitor password changed :"+status);
+		}else{
+			log.error("Visitor details are invalid");
+		}
+		
+		ModelAndView mv=new ModelAndView();
+		
+		if(status > 0){
+			mv.addObject("status","success");
+			mv.setViewName("/changePWD.jsp");
+		}else if(status == -5){			
+			mv.addObject("status", "error");
+			mv.addObject("errorMsg", "System error occurred, Please verify log file for more details");
+			mv.setViewName("/changePWD.jsp");
+		}else if(status == -10){
+			mv.addObject("status", "error");
+			mv.addObject("errorMsg", "New password must be different from current password, please choose a different password and retry");
+			mv.setViewName("/changePWD.jsp");
+		}else{
+			mv.addObject("status", "error");
+			mv.addObject("errorMsg", "Error while changing password.. Please verify visitor and password details and retry again");			
+			mv.setViewName("/changePWD.jsp");
+		}
+		return mv;		
+	}
+	
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is to unregister event by the visitor 
+	 * and tickets will be freed to other visitors<br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+
+	@RequestMapping("/eventunreg.htm")
+	public ModelAndView unregisterEvent(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+		int eventid = Integer.parseInt(request.getParameter("eventId"));
+		int eventsessionid = Integer.parseInt(request
+				.getParameter("eventsessionid"));
+
+		log.info("Unregistering for the event :" + eventid);
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+		vServiceImpl.unregisterEvent(visitor, eventid, eventsessionid);
+
+		List<Object[]> regList = new ArrayList<Object[]>();
+		regList = vServiceImpl.showRegisteredEvents(visitor);
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		serviceImpl.updateEventDeletions(eventid, eventsessionid);
+
+		log.info("Seats allocated for the event are released :" + eventid);
+
+		eventList = serviceImpl.getAllEvents();
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.addObject("regEvents", regList);
+		mv.setViewName("/visitormain.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for searching for events based on an event  
+	 * name entered on the visitor portal page by the user <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+	@RequestMapping("/searchEventByName.htm")
+	public ModelAndView searchEventsByName(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+		String eventname = request.getParameter("eventname");
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+
+		log.info("Search event by name called..." + eventname);
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		eventList = serviceImpl.getAllEvents(eventname);
+
+		List<Object[]> regList = new ArrayList<Object[]>();
+		regList = vServiceImpl.showRegisteredEvents(visitor);
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.addObject("regEvents", regList);
+		mv.setViewName("/visitormain.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for searching for events based on the event name
+	 * entered on the Event Catalog page by the Visitor <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+	@RequestMapping("/searchEventByNameCatalog.htm")
+	public ModelAndView searchEventsByNameCatalog(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+		String eventname = request.getParameter("eventname");
+
+		log.info("Search event by name called in catalog..." + eventname);
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		eventList = serviceImpl.getAllEvents(eventname);
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.setViewName("/eventCatalog.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for displaying data of 
+	 * events to be displayed in Ascending order <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+	@RequestMapping("/displayasc.htm")
+	public ModelAndView showEventsAsc(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+		EventFacade serviceImpl = new EventServiceImpl();
+		List<Object[]> regList = new ArrayList<Object[]>();
+
+		log.info("Show events in Ascending order...");
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+
+		eventList = serviceImpl.getAllEventsAsc();
+
+		regList = vServiceImpl.showRegisteredEvents(visitor);
+		System.out.println("desc");
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.addObject("regEvents", regList);
+		mv.setViewName("/visitormain.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for displaying data of events to be displayed
+	 * on the visitor's home page in descending order <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 * 
+	 */
+	@RequestMapping("/displaydesc.htm")
+	public ModelAndView showEventsDesc(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+
+		VisitorFacade vServiceImpl = new VisitorServiceImpl();
+
+		log.info("Show events in Descending order...");
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		eventList = serviceImpl.getAllEventsDesc();
+
+		List<Object[]> regList = new ArrayList<Object[]>();
+		regList = vServiceImpl.showRegisteredEvents(visitor);
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.addObject("regEvents", regList);
+		mv.setViewName("/visitormain.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for displaying data of events to be  
+	 * displayed in ascending order on the event catalog page. <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 */
+	@RequestMapping("/displaycatalogasc.htm")
+	public ModelAndView showEventsCatalogAsc(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+
+		log.info("Show events of catalogue in Ascending order...");
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		eventList = serviceImpl.getAllEventsAsc();
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.setViewName("/eventCatalog.jsp");
+		return mv;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * This method is for displaying data of events to be displayed
+	 * in Descending order on the Event Catalog page. <br/>
+	 * 
+	 * @return ModelAndView 
+	 * 
+	 * @param request
+	 * @param response
+	 * 
+	 * @throws Exception
+	 * 
+	 */
+	@RequestMapping("/displaycatalogdesc.htm")
+	public ModelAndView showEventsCatalogDesc(HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+
+		if (request == null || response == null) {
+			log.info("Request or Response failed for UNREGISTEREVENT METHOD..");
+			throw new FERSGenericException(
+					"Error in Transaction, Please re-Try. for more information check Logfile in C:\\FERSLOG folder",
+					new NullPointerException());
+		}
+
+		HttpSession session = request.getSession();
+		Visitor visitor = (Visitor) session.getAttribute("VISITOR");
+
+		log.info("Show events of catalogue in Descending order...");
+
+		List<Object[]> eventList = new ArrayList<Object[]>();
+		EventFacade serviceImpl = new EventServiceImpl();
+
+		eventList = serviceImpl.getAllEventsDesc();
+
+		ModelAndView mv = new ModelAndView();
+		mv.addObject("visitor", visitor);
+		mv.addObject("allEvents", eventList);
+		mv.setViewName("/eventCatalog.jsp");
+		return mv;
+	}
+}
+--------------------------------------------------------------------
+package com.accenture.adf.businesstier.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import com.accenture.adf.businesstier.entity.Event;
+import com.accenture.adf.businesstier.entity.EventCoordinator;
+import com.accenture.adf.businesstier.entity.Visitor;
+import com.accenture.adf.exceptions.FERSGenericException;
+import com.accenture.adf.helper.FERSDataConnection;
+import com.accenture.adf.helper.FERSDbQuery;
+
+/**
+ * <br/>
+ * CLASS DESCRIPTION: <br/>
+ * A Data Access Object (DAO) class for handling and managing event related data
+ * requested, updated, and processed in the application and maintained in the
+ * database. The interface between the application and event data persisting in
+ * the database. <br/>
+ * 
+ * @author krishna.kishore
+ * 
+ */
+public class EventDAO {
+
+	// LOGGER for handling all transaction messages in EVENTDAO
+	private static Logger log = Logger.getLogger(EventDAO.class);
+
+	// JDBC API classes for data persistence
+	private Connection connection = null;
+	private PreparedStatement statement = null;
+	private ResultSet resultSet = null;
+	private FERSDbQuery query;
+
+	// Default constructor for injecting Spring dependencies for SQL queries
+	public EventDAO() {
+		ApplicationContext context = new ClassPathXmlApplicationContext(
+				"applicationContext.xml");
+		query = (FERSDbQuery) context.getBean("SqlBean");
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table. <br/>
+	 * Execute the SQL statement and keep a reference to the result set.<br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set.<br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public ArrayList<Object[]> showAllEvents() throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSearchEvent());
+		resultSet = statement.executeQuery();
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+		log.info("All Events retreived from Database :" + eventList);
+		while (resultSet.next()) {
+			Object[] eventObject = new Object[8];
+			eventObject[0] = resultSet.getInt("eventid");
+			eventObject[1] = resultSet.getString("name");
+			eventObject[2] = resultSet.getString("description");
+			eventObject[3] = resultSet.getString("duration");
+			eventObject[4] = resultSet.getString("eventtype");
+			eventObject[5] = resultSet.getString("places");
+			eventObject[6] = resultSet.getInt("seatsavailable");
+			eventObject[7] = resultSet.getInt("eventsessionid");
+			System.out.println(resultSet.getInt("eventid"));
+			eventList.add(eventObject);
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return eventList;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION:<br/>
+	 * DAO for updating events after the visitor registers for an event <br/>
+	 * 
+	 * @return void
+	 * 
+	 * @param eventid
+	 * @param sessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws Exception
+	 * 
+	 */
+
+	public void updateEventNominations(int eventid, int sessionid)
+			throws ClassNotFoundException, SQLException, Exception {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateEvent());
+		statement.setInt(1, sessionid);
+		statement.setInt(2, eventid);
+		int status = statement.executeUpdate();
+		if (status <= 0)
+			throw new FERSGenericException("Records not updated properly",
+					new Exception());
+		log.info("Event registration status was updated in Database and Seat allocated");
+		FERSDataConnection.closeConnection();
+
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION:<br/>
+	 * DAO for checking visitor has already registered for EVENT or not. Sends
+	 * boolean values about status.<br/>
+	 * 
+	 * @return boolean
+	 * 
+	 * @param visitor
+	 * @param eventid
+	 * @param sessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public boolean checkEventsofVisitor(Visitor visitor, int eventid,
+			int sessionid) throws ClassNotFoundException, SQLException {
+		connection = FERSDataConnection.createConnection();
+		log.info("Status obtained for Visitor :" + visitor.getFirstName()
+				+ " to event with ID :" + eventid);
+		statement = connection.prepareStatement(query.getCheckEvent());
+		statement.setInt(1, sessionid);
+		statement.setInt(2, visitor.getVisitorId());
+		statement.setInt(3, eventid);
+		resultSet = statement.executeQuery();
+		int status = 0;
+		while (resultSet.next()) {
+			status = resultSet.getInt("EVENTCOUNT");
+		}
+		resultSet.close();
+		log.info("No of times visitor registered for Event :" + status);
+		FERSDataConnection.closeConnection();
+		if (status >= 1)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for update event database after unregistering event by visitor <br/>
+	 * 
+	 * @return void
+	 * 
+	 * @param eventid
+	 * @param eventsessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws Exception
+	 * 
+	 */
+
+	public void updateEventDeletions(int eventid, int eventsessionid)
+			throws ClassNotFoundException, SQLException, Exception {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateDeleteEvent());
+		statement.setInt(1, eventsessionid);
+		statement.setInt(2, eventid);
+		int status = statement.executeUpdate();
+		if (status <= 0)
+			throw new FERSGenericException("Records not updated properly",
+					new Exception());
+		log.info("Event registration status was updated in Database and Seat released");
+		FERSDataConnection.closeConnection();
+
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database with
+	 * names that contain the text entered by the user. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * @param eventname
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+
+	public ArrayList<Object[]> showAllEvents(String eventname)
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSearchByEventName());
+		statement.setString(1,eventname);
+		resultSet = statement.executeQuery();
+		
+		log.info("All Events retreived from Database :" + eventList);
+		while (resultSet.next()) {
+			Object[] eventObject = new Object[8];
+			eventObject[0] = resultSet.getInt("eventid");
+			eventObject[1] = resultSet.getString("name");
+			eventObject[2] = resultSet.getString("description");
+			eventObject[3] = resultSet.getString("duration");
+			eventObject[4] = resultSet.getString("eventtype");
+			eventObject[5] = resultSet.getString("places");
+			eventObject[6] = resultSet.getInt("seatsavailable");
+			eventObject[7] = resultSet.getInt("eventsessionid");
+			eventList.add(eventObject);
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return eventList;
+
+		
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database in
+	 * ascending order. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table in ascending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+
+	public ArrayList<Object[]> showAllEventsAsc()
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		   statement = connection.prepareStatement(query.getSearchEventAsc());
+		   resultSet = statement.executeQuery();
+		   while(resultSet.next()){
+		    
+		    Object[] eventObject = new Object[8]; 
+		    eventObject[0] = resultSet.getInt("eventid");
+		    
+		    eventObject[1] = resultSet.getString("name");
+		    eventObject[2] = resultSet.getString("description");
+		    eventObject[3] = resultSet.getString("places");
+		    eventObject[4] = resultSet.getString("duration");
+		    eventObject[5] = resultSet.getString("eventtype");
+		    eventObject[6]=resultSet.getString("seatsavailable");
+		    eventObject[7] = resultSet.getInt("eventsessionid");
+		    
+		    eventList.add(eventObject);
+		    
+		   }
+
+		 
+		  return eventList;
+
+		 }
+
+		
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database in
+	 * descending order. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table in descending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public ArrayList<Object[]> showAllEventsDesc()
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		   statement = connection.prepareStatement(query.getSearchEventDesc());
+		   resultSet = statement.executeQuery();
+		   while(resultSet.next()){
+		    
+		    Object[] eventObject = new Object[8]; 
+		    eventObject[0] = resultSet.getInt("eventid");
+		    
+		    eventObject[1] = resultSet.getString("name");
+		    eventObject[2] = resultSet.getString("description");
+		    eventObject[3] = resultSet.getString("places");
+		    eventObject[4] = resultSet.getString("duration");
+		    eventObject[5] = resultSet.getString("eventtype");
+		    eventObject[6]=resultSet.getString("seatsavailable");
+		    eventObject[7] = resultSet.getInt("eventsessionid");
+		    
+		    eventList.add(eventObject);
+		   }
+		return eventList;
+
+	}
+	
+	/**
+	 * This method fetch the event on basis of eventId
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set by using getGetEvent method. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the Event object to the calling method. <br/>
+	 * 
+	 * @param eventId
+	 * @param sessionId
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public Event getEvent(int eventId, int sessionId)
+			throws ClassNotFoundException, SQLException {
+		
+		Event event = new Event();
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getGetEvent());
+		statement.setInt(1, eventId);
+		statement.setInt(2, sessionId);
+		resultSet=statement.executeQuery();
+		while(resultSet.next())
+		{
+			event.setEventid(resultSet.getInt(1));
+			event.setName(resultSet.getString(2));
+			event.setDescription(resultSet.getString(3));
+			event.setPlace(resultSet.getString(4));
+			event.setDuration(resultSet.getString(5));
+			event.setEventtype(resultSet.getString(6));
+			event.setSessionId(resultSet.getInt(7));
+			event.setSeatsavailable(resultSet.getString(8));
+		}
+		
+		return event;
+	}
+
+	/**
+	 * This method updates the event
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Update the event object by calling getUpdateEventSession method
+	 * Event is updated in database. <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param updateEvent
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public int updateEvent(Event updateEvent) throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateTEvent());
+		statement.setString(1, updateEvent.getName());
+		statement.setString(2, updateEvent.getDescription());
+		statement.setString(3, updateEvent.getPlace());
+		statement.setString(4, updateEvent.getDuration());
+		statement.setString(5, updateEvent.getEventtype());
+		statement.setInt(6, updateEvent.getEventid());
+		int res1=statement.executeUpdate();
+		statement=connection.prepareStatement(query.getUpdateEventSession());
+		statement.setString(1, updateEvent.getSeatsavailable());
+		statement.setInt(2, updateEvent.getSessionId());
+		statement.setInt(3, updateEvent.getEventid());
+		int res2=statement.executeUpdate();
+	//	statement.setString(1, updateEvent.);
+		if(res1==1&&res2==1)
+		{
+			return 1;
+		}
+		else
+			return 0;
+	}
+
+	/**
+	 * This method inserts new event in database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Insert the event object by calling getInsertEvent method
+	 * Event object is inserted in database  <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param insertEvent
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public int insertEvent(Event insertEvent) throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		System.out.println(insertEvent);
+		statement = connection.prepareStatement(query.getInsertEvent());
+		statement.setInt(1,insertEvent.getEventid());
+		statement.setString(2, insertEvent.getName());
+		statement.setString(3,insertEvent.getDescription());
+		statement.setString(4,insertEvent.getPlace());
+		statement.setString(5,insertEvent.getDuration());
+		statement.setString(6,insertEvent.getEventtype());
+		int res1= statement.executeUpdate();
+		statement = connection.prepareStatement(query.getInsertEventSession());
+		statement.setInt(1,insertEvent.getSessionId());
+		statement.setInt(2,insertEvent.getEventCoordinatorId());
+		statement.setInt(3,insertEvent.getEventid());
+		statement.setInt(4,Integer.parseInt(insertEvent.getSeatsavailable()));
+		int res2= statement.executeUpdate();
+		System.out.println(insertEvent.getSeatsavailable());
+		if(res1==1&&res2==1)
+		{
+			return 1;
+		}
+		else
+			return 0;
+		
+	}	
+	
+
+	/**
+	 * This method deletes the event on basis of eventid and eventsessionid from database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Delete the event object by calling getDeleteEventSession and getDeleteEvent method
+	 * Event and EventSession object is deleted from database  <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param eventId
+	 * @param sessionId
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws FERSGenericException
+	 */
+	public int deleteEvent(int eventId, int sessionId)
+			throws ClassNotFoundException, SQLException, FERSGenericException {
+		int res=0;
+		 
+		int res1=0;
+		 
+		int res2=0;
+		 
+		connection = FERSDataConnection.createConnection();
+		 
+		statement = connection.prepareStatement(query.getGetEvent());
+		 
+		statement.setInt(1, eventId);
+		 
+		statement.setInt(2, sessionId);
+		 
+		resultSet=statement.executeQuery();
+
+		 
+		while(resultSet.next())
+
+		{
+		 
+		statement = connection.prepareStatement(query.getDeleteEventSession());
+		 
+		statement.setInt(1, eventId);
+		 
+		res=statement.executeUpdate();
+		 
+		statement = connection.prepareStatement(query.getDeleteEventQuery());
+		 
+		statement.setInt(1, eventId);
+		 
+		res1=statement.executeUpdate();
+		 
+		statement = connection.prepareStatement(query.getDeleteEvent());
+		 
+		statement.setInt(1, eventId);
+		 
+		res2=statement.executeUpdate();
+
+
+		}
+
+
+
+		 
+		return res2; 
+
+		
+	}
+
+	/**
+	 * This method fetches the list of event coordinator from database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the eventcoordinator username
+	 * from the eventcoordinator table in descending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * EventCoordinator object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the List to the calling method. <br/>
+	 * 
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public List<EventCoordinator> getEventCoordinator()
+			throws ClassNotFoundException, SQLException {
+		
+		List<EventCoordinator> eventCoordinatorList = new ArrayList<EventCoordinator>();
+		EventCoordinator eventCoordinator;
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSelectEventCoordinator());
+		resultSet=statement.executeQuery();
+		while(resultSet.next())
+		{
+			
+			eventCoordinator=new EventCoordinator();
+			eventCoordinator.setEventcoordinatorid(resultSet.getInt(1));
+			eventCoordinator.setUserName(resultSet.getString(2));
+			eventCoordinatorList.add(eventCoordinator);
+			
+		}
+			
+		
+		return eventCoordinatorList;
+	}
+}
+-----------------------------------------------------------------------
+package com.accenture.adf.businesstier.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import com.accenture.adf.businesstier.entity.Event;
+import com.accenture.adf.businesstier.entity.EventCoordinator;
+import com.accenture.adf.businesstier.entity.Visitor;
+import com.accenture.adf.exceptions.FERSGenericException;
+import com.accenture.adf.helper.FERSDataConnection;
+import com.accenture.adf.helper.FERSDbQuery;
+
+/**
+ * <br/>
+ * CLASS DESCRIPTION: <br/>
+ * A Data Access Object (DAO) class for handling and managing event related data
+ * requested, updated, and processed in the application and maintained in the
+ * database. The interface between the application and event data persisting in
+ * the database. <br/>
+ * 
+ * @author krishna.kishore
+ * 
+ */
+public class EventDAO {
+
+	// LOGGER for handling all transaction messages in EVENTDAO
+	private static Logger log = Logger.getLogger(EventDAO.class);
+
+	// JDBC API classes for data persistence
+	private Connection connection = null;
+	private PreparedStatement statement = null;
+	private ResultSet resultSet = null;
+	private FERSDbQuery query;
+
+	// Default constructor for injecting Spring dependencies for SQL queries
+	public EventDAO() {
+		ApplicationContext context = new ClassPathXmlApplicationContext(
+				"applicationContext.xml");
+		query = (FERSDbQuery) context.getBean("SqlBean");
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table. <br/>
+	 * Execute the SQL statement and keep a reference to the result set.<br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set.<br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public ArrayList<Object[]> showAllEvents() throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSearchEvent());
+		resultSet = statement.executeQuery();
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+		log.info("All Events retreived from Database :" + eventList);
+		while (resultSet.next()) {
+			Object[] eventObject = new Object[8];
+			eventObject[0] = resultSet.getInt("eventid");
+			eventObject[1] = resultSet.getString("name");
+			eventObject[2] = resultSet.getString("description");
+			eventObject[3] = resultSet.getString("duration");
+			eventObject[4] = resultSet.getString("eventtype");
+			eventObject[5] = resultSet.getString("places");
+			eventObject[6] = resultSet.getInt("seatsavailable");
+			eventObject[7] = resultSet.getInt("eventsessionid");
+			System.out.println(resultSet.getInt("eventid"));
+			eventList.add(eventObject);
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return eventList;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION:<br/>
+	 * DAO for updating events after the visitor registers for an event <br/>
+	 * 
+	 * @return void
+	 * 
+	 * @param eventid
+	 * @param sessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws Exception
+	 * 
+	 */
+
+	public void updateEventNominations(int eventid, int sessionid)
+			throws ClassNotFoundException, SQLException, Exception {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateEvent());
+		statement.setInt(1, sessionid);
+		statement.setInt(2, eventid);
+		int status = statement.executeUpdate();
+		if (status <= 0)
+			throw new FERSGenericException("Records not updated properly",
+					new Exception());
+		log.info("Event registration status was updated in Database and Seat allocated");
+		FERSDataConnection.closeConnection();
+
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION:<br/>
+	 * DAO for checking visitor has already registered for EVENT or not. Sends
+	 * boolean values about status.<br/>
+	 * 
+	 * @return boolean
+	 * 
+	 * @param visitor
+	 * @param eventid
+	 * @param sessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public boolean checkEventsofVisitor(Visitor visitor, int eventid,
+			int sessionid) throws ClassNotFoundException, SQLException {
+		connection = FERSDataConnection.createConnection();
+		log.info("Status obtained for Visitor :" + visitor.getFirstName()
+				+ " to event with ID :" + eventid);
+		statement = connection.prepareStatement(query.getCheckEvent());
+		statement.setInt(1, sessionid);
+		statement.setInt(2, visitor.getVisitorId());
+		statement.setInt(3, eventid);
+		resultSet = statement.executeQuery();
+		int status = 0;
+		while (resultSet.next()) {
+			status = resultSet.getInt("EVENTCOUNT");
+		}
+		resultSet.close();
+		log.info("No of times visitor registered for Event :" + status);
+		FERSDataConnection.closeConnection();
+		if (status >= 1)
+			return true;
+		else
+			return false;
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for update event database after unregistering event by visitor <br/>
+	 * 
+	 * @return void
+	 * 
+	 * @param eventid
+	 * @param eventsessionid
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws Exception
+	 * 
+	 */
+
+	public void updateEventDeletions(int eventid, int eventsessionid)
+			throws ClassNotFoundException, SQLException, Exception {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateDeleteEvent());
+		statement.setInt(1, eventsessionid);
+		statement.setInt(2, eventid);
+		int status = statement.executeUpdate();
+		if (status <= 0)
+			throw new FERSGenericException("Records not updated properly",
+					new Exception());
+		log.info("Event registration status was updated in Database and Seat released");
+		FERSDataConnection.closeConnection();
+
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database with
+	 * names that contain the text entered by the user. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * @param eventname
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+
+	public ArrayList<Object[]> showAllEvents(String eventname)
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSearchByEventName());
+		statement.setString(1,eventname);
+		resultSet = statement.executeQuery();
+		
+		log.info("All Events retreived from Database :" + eventList);
+		while (resultSet.next()) {
+			Object[] eventObject = new Object[8];
+			eventObject[0] = resultSet.getInt("eventid");
+			eventObject[1] = resultSet.getString("name");
+			eventObject[2] = resultSet.getString("description");
+			eventObject[3] = resultSet.getString("duration");
+			eventObject[4] = resultSet.getString("eventtype");
+			eventObject[5] = resultSet.getString("places");
+			eventObject[6] = resultSet.getInt("seatsavailable");
+			eventObject[7] = resultSet.getInt("eventsessionid");
+			eventList.add(eventObject);
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return eventList;
+
+		
+	}
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database in
+	 * ascending order. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table in ascending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+
+	public ArrayList<Object[]> showAllEventsAsc()
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		   statement = connection.prepareStatement(query.getSearchEventAsc());
+		   resultSet = statement.executeQuery();
+		   while(resultSet.next()){
+		    
+		    Object[] eventObject = new Object[8]; 
+		    eventObject[0] = resultSet.getInt("eventid");
+		    
+		    eventObject[1] = resultSet.getString("name");
+		    eventObject[2] = resultSet.getString("description");
+		    eventObject[3] = resultSet.getString("places");
+		    eventObject[4] = resultSet.getString("duration");
+		    eventObject[5] = resultSet.getString("eventtype");
+		    eventObject[6]=resultSet.getString("seatsavailable");
+		    eventObject[7] = resultSet.getInt("eventsessionid");
+		    
+		    eventList.add(eventObject);
+		    
+		   }
+
+		 
+		  return eventList;
+
+		 }
+
+		
+
+	/**
+	 * <br/>
+	 * METHOD DESCRIPTION: <br/>
+	 * DAO for displaying all the Events in the Event Table in the Database in
+	 * descending order. <br/>
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the events
+	 * from the event table in descending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the ArrayList to the calling method. <br/>
+	 * 
+	 * 
+	 * @return Collection of Events
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * 
+	 */
+	public ArrayList<Object[]> showAllEventsDesc()
+			throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+
+		connection = FERSDataConnection.createConnection();
+		   statement = connection.prepareStatement(query.getSearchEventDesc());
+		   resultSet = statement.executeQuery();
+		   while(resultSet.next()){
+		    
+		    Object[] eventObject = new Object[8]; 
+		    eventObject[0] = resultSet.getInt("eventid");
+		    
+		    eventObject[1] = resultSet.getString("name");
+		    eventObject[2] = resultSet.getString("description");
+		    eventObject[3] = resultSet.getString("places");
+		    eventObject[4] = resultSet.getString("duration");
+		    eventObject[5] = resultSet.getString("eventtype");
+		    eventObject[6]=resultSet.getString("seatsavailable");
+		    eventObject[7] = resultSet.getInt("eventsessionid");
+		    
+		    eventList.add(eventObject);
+		   }
+		return eventList;
+
+	}
+	
+	/**
+	 * This method fetch the event on basis of eventId
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set by using getGetEvent method. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * Event object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the Event object to the calling method. <br/>
+	 * 
+	 * @param eventId
+	 * @param sessionId
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public Event getEvent(int eventId, int sessionId)
+			throws ClassNotFoundException, SQLException {
+		
+		Event event = new Event();
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getGetEvent());
+		statement.setInt(1, eventId);
+		statement.setInt(2, sessionId);
+		resultSet=statement.executeQuery();
+		while(resultSet.next())
+		{
+			event.setEventid(resultSet.getInt(1));
+			event.setName(resultSet.getString(2));
+			event.setDescription(resultSet.getString(3));
+			event.setPlace(resultSet.getString(4));
+			event.setDuration(resultSet.getString(5));
+			event.setEventtype(resultSet.getString(6));
+			event.setSessionId(resultSet.getInt(7));
+			event.setSeatsavailable(resultSet.getString(8));
+		}
+		
+		return event;
+	}
+
+	/**
+	 * This method updates the event
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Update the event object by calling getUpdateEventSession method
+	 * Event is updated in database. <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param updateEvent
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public int updateEvent(Event updateEvent) throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateTEvent());
+		statement.setString(1, updateEvent.getName());
+		statement.setString(2, updateEvent.getDescription());
+		statement.setString(3, updateEvent.getPlace());
+		statement.setString(4, updateEvent.getDuration());
+		statement.setString(5, updateEvent.getEventtype());
+		statement.setInt(6, updateEvent.getEventid());
+		int res1=statement.executeUpdate();
+		statement=connection.prepareStatement(query.getUpdateEventSession());
+		statement.setString(1, updateEvent.getSeatsavailable());
+		statement.setInt(2, updateEvent.getSessionId());
+		statement.setInt(3, updateEvent.getEventid());
+		int res2=statement.executeUpdate();
+	//	statement.setString(1, updateEvent.);
+		if(res1==1&&res2==1)
+		{
+			return 1;
+		}
+		else
+			return 0;
+	}
+
+	/**
+	 * This method inserts new event in database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Insert the event object by calling getInsertEvent method
+	 * Event object is inserted in database  <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param insertEvent
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public int insertEvent(Event insertEvent) throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		System.out.println(insertEvent);
+		statement = connection.prepareStatement(query.getInsertEvent());
+		statement.setInt(1,insertEvent.getEventid());
+		statement.setString(2, insertEvent.getName());
+		statement.setString(3,insertEvent.getDescription());
+		statement.setString(4,insertEvent.getPlace());
+		statement.setString(5,insertEvent.getDuration());
+		statement.setString(6,insertEvent.getEventtype());
+		int res1= statement.executeUpdate();
+		statement = connection.prepareStatement(query.getInsertEventSession());
+		statement.setInt(1,insertEvent.getSessionId());
+		statement.setInt(2,insertEvent.getEventCoordinatorId());
+		statement.setInt(3,insertEvent.getEventid());
+		statement.setInt(4,Integer.parseInt(insertEvent.getSeatsavailable()));
+		int res2= statement.executeUpdate();
+		System.out.println(insertEvent.getSeatsavailable());
+		if(res1==1&&res2==1)
+		{
+			return 1;
+		}
+		else
+			return 0;
+		
+	}	
+	
+
+	/**
+	 * This method deletes the event on basis of eventid and eventsessionid from database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that get an event
+	 * from the event table for provided event id. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Delete the event object by calling getDeleteEventSession and getDeleteEvent method
+	 * Event and EventSession object is deleted from database  <br/>
+	 * Return the status of executed query. <br/>
+	 * 
+	 * @param eventId
+	 * @param sessionId
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws FERSGenericException
+	 */
+	public int deleteEvent(int eventId, int sessionId)
+			throws ClassNotFoundException, SQLException, FERSGenericException {
+		int res=0;
+		 
+		int res1=0;
+		 
+		int res2=0;
+		 
+		connection = FERSDataConnection.createConnection();
+		 
+		statement = connection.prepareStatement(query.getGetEvent());
+		 
+		statement.setInt(1, eventId);
+		 
+		statement.setInt(2, sessionId);
+		 
+		resultSet=statement.executeQuery();
+
+		 
+		while(resultSet.next())
+
+		{
+		 
+		statement = connection.prepareStatement(query.getDeleteEventSession());
+		 
+		statement.setInt(1, eventId);
+		 
+		res=statement.executeUpdate();
+		 
+		statement = connection.prepareStatement(query.getDeleteEventQuery());
+		 
+		statement.setInt(1, eventId);
+		 
+		res1=statement.executeUpdate();
+		 
+		statement = connection.prepareStatement(query.getDeleteEvent());
+		 
+		statement.setInt(1, eventId);
+		 
+		res2=statement.executeUpdate();
+
+
+		}
+
+
+
+		 
+		return res2; 
+
+		
+	}
+
+	/**
+	 * This method fetches the list of event coordinator from database
+	 * 
+	 * PSEUDOCODE: <br/>
+	 * Create a new connection to the database. <br/>
+	 * Prepare a statement object using the connection that gets all the eventcoordinator username
+	 * from the eventcoordinator table in descending order. <br/>
+	 * Execute the SQL statement and keep a reference to the result set. <br/>
+	 * Using a WHILE LOOP, store each record in the result set returned in an
+	 * EventCoordinator object by setting the values of the Event attributes as the
+	 * corresponding values in the Result set. <br/>
+	 * Return the List to the calling method. <br/>
+	 * 
+	 * @return
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public List<EventCoordinator> getEventCoordinator()
+			throws ClassNotFoundException, SQLException {
+		
+		List<EventCoordinator> eventCoordinatorList = new ArrayList<EventCoordinator>();
+		EventCoordinator eventCoordinator;
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getSelectEventCoordinator());
+		resultSet=statement.executeQuery();
+		while(resultSet.next())
+		{
+			
+			eventCoordinator=new EventCoordinator();
+			eventCoordinator.setEventcoordinatorid(resultSet.getInt(1));
+			eventCoordinator.setUserName(resultSet.getString(2));
+			eventCoordinatorList.add(eventCoordinator);
+			
+		}
+			
+		
+		return eventCoordinatorList;
+	}
+}
+-----------------------------------------------------------------------
+package com.accenture.adf.businesstier.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+
+import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import com.accenture.adf.businesstier.entity.Event;
+import com.accenture.adf.businesstier.entity.Visitor;
+import com.accenture.adf.exceptions.FERSGenericException;
+import com.accenture.adf.helper.FERSDataConnection;
+import com.accenture.adf.helper.FERSDbQuery;
+
+/**
+ *  <br/>
+ *  CLASS DESCRIPTION: <br/>
+ *  A Data Access Object (DAO) class for handling and managing visitor related 
+ *  data requested, used, and processed in the application and maintained in 
+ *  the database.  The interface between the application and visitor data 
+ *  persisting in the database. <br/>
+ *  
+ *  @author krishna.kishore
+ *  
+ */
+public class VisitorDAO {
+
+	// LOGGER for handling all transaction messages in VISITORDAO
+	private static Logger log = Logger.getLogger(VisitorDAO.class);
+
+	//JDBC API classes for data persistence
+	private Connection connection = null;
+	private PreparedStatement statement = null;
+	private ResultSet resultSet = null;
+	private FERSDbQuery query;
+
+	//Default constructor for injecting Spring dependencies for SQL queries
+	public VisitorDAO() {
+		ApplicationContext context = new ClassPathXmlApplicationContext(
+				"applicationContext.xml");
+		query = (FERSDbQuery) context.getBean("SqlBean");
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION: <br/>
+	 *  DAO method to insert visitor details into the VISITOR table 
+	 *  after validating that the desired username of the visitor 
+	 *  does not currently exist. <br/>
+	 *  
+	 *  @return boolean
+	 *  
+	 *  @param visitor
+	 *  
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  @throws Exception
+	 *  
+	 */
+	public boolean insertData(Visitor visitor) throws ClassNotFoundException,
+			SQLException, Exception {
+		connection = FERSDataConnection.createConnection();
+		Statement selStatement = connection.createStatement();
+		statement = connection.prepareStatement(query.getInsertQuery());
+		resultSet = selStatement.executeQuery(query.getValidateVisitor());
+		boolean userFound = false;
+		while (resultSet.next()) {
+			if (resultSet.getString("username").equals(visitor.getUserName())) {
+				userFound = true;
+				log.info("Vistor with USERNAME already exists in Database");
+				break;
+			}
+		}
+		if (userFound == false) {
+			statement.setString(1, visitor.getUserName());
+			statement.setString(2, visitor.getPassword());
+			statement.setString(3, visitor.getFirstName());
+			statement.setString(4, visitor.getLastName());
+			statement.setString(5, visitor.getEmail());
+			statement.setString(6, visitor.getPhoneNumber());
+			statement.setString(7, visitor.getAddress());
+			int status = statement.executeUpdate();
+			if (status <= 0)
+				throw new FERSGenericException("Records not updated properly",
+						new Exception());
+			log.info("Visitor details inserted into Database");
+			FERSDataConnection.closeConnection();
+			return true;
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return false;
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION: <br/>
+	 *  DAO method for searching for a existing visitor account 
+	 *  using the entered username and password. <br/>
+	 *  
+	 *  @return Visitor
+	 *  
+	 *  @param  username
+	 *  @param  password
+	 *  
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  
+	 */
+	public Visitor searchUser(String username, String password)
+			throws ClassNotFoundException, SQLException {
+		connection = FERSDataConnection.createConnection();
+		Visitor visitor = new Visitor();
+		statement = connection.prepareStatement(query.getSearchQuery());
+		statement.setString(1, username);
+		statement.setString(2, password);
+		resultSet = statement.executeQuery();
+		log.info("Retreived Visitor details from DATABASE for username :"
+				+ username);
+		while (resultSet.next()) {
+			visitor.setUserName(resultSet.getString("username"));
+			//visitor.setPassword(resultSet.getString("password"));
+			visitor.setVisitorId(resultSet.getInt("visitorid"));
+			visitor.setFirstName(resultSet.getString("firstname"));
+			visitor.setLastName(resultSet.getString("lastname"));
+			visitor.setEmail(resultSet.getString("email"));
+			visitor.setPhoneNumber(resultSet.getString("phonenumber"));
+			visitor.setAddress(resultSet.getString("address"));
+		}
+		resultSet.close();
+		FERSDataConnection.closeConnection();
+		return visitor;
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION: <br/>
+	 *  DAO method to register visitor to specific event and checking about status
+	 *  of visitor to particular event. <br/>
+	 *  
+	 *  PSEUDO-CODE: <br/>
+	 *     Create a connection to the database <br/>
+	 *     Prepare a statement object using the connection: that inserts the   
+	 *       visitor, event, and session IDs into the EVENTSESSIONSIGNUP table <br/>
+	 *     Execute the query to perform the update <br/>
+	 *  
+	 *  @return void
+	 *  
+	 *  @param visitor
+	 *  @param eventid
+	 *  @param sessionid
+	 *  
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  @throws Exception
+	 *  
+	 */
+	public void registerVisitorToEvent(Visitor visitor, int eventid, int sessionid)
+			throws ClassNotFoundException, SQLException, Exception {
+
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getRegisterQuery());
+	
+		statement.setInt(1, visitor.getVisitorId());
+		statement.setInt(3, eventid);
+		statement.setInt(2, sessionid);
+		statement.execute();
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION:<br/>
+	 *  DAO method to display all the events registered by particular visitor<br/>
+	 *  
+	 *  PSEUDO-CODE: <br/>
+	 *     Create a connection to the database <br/>
+	 *     Prepare a statement object using the connection: that returns the event   
+	 *       information for all the events that are registered to a visitor<br/>
+	 *     Execute the query to retrieve the results into a result set<br/>
+	 *     Using a WHILE LOOP, place each event record‘s information 
+	 *       in an event list. <br/>
+	 *  
+	 *  @return Collection of Object Arrays
+	 *  
+	 *  @param  visitor
+	 *  
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  
+	 */
+	public ArrayList<Object[]> registeredEvents(Visitor visitor)throws ClassNotFoundException, SQLException {
+
+		ArrayList<Object[]> eventList = new ArrayList<Object[]>();
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getStatusQuery());
+		//Visitor visitor1 = new Visitor();
+		statement.setInt(1, visitor.getVisitorId());
+		 resultSet  =statement.executeQuery();		 
+		 System.out.println("eventList");
+
+			 while(resultSet.next()){
+				 Object[] eventObject = new Object[10];
+					eventObject[0] = resultSet.getInt("EVENTID");
+					eventObject[1] = resultSet.getString("NAME");
+					eventObject[2] = resultSet.getString("DESCRIPTION");
+					eventObject[3] = resultSet.getString("PLACES");
+					eventObject[4] = resultSet.getString("DURATION");
+					eventObject[5] = resultSet.getString("EVENTTYPE");
+					eventObject[6] = resultSet.getString("FIRSTNAME");
+					//eventObject[9] = resultSet.getString("EVENTCOORDINATOR");
+					eventObject[7] = resultSet.getString("EVENTSESSIONID");
+					//eventObject[9] = resultSet.getInt("signupid");
+					eventList.add(eventObject);
+			 }
+	
+				FERSDataConnection.closeConnection();
+				return eventList;
+
+		
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION: <br/>
+	 *  DAO method to update visitor with additional information <br/>
+	 * 
+	 *  @return int
+	 * 
+	 *  @param visitor
+	 * 
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  
+	 */
+	public int updateVisitor(Visitor visitor) throws ClassNotFoundException,
+			SQLException {
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getUpdateQuery());
+		statement.setString(1, visitor.getFirstName());
+		statement.setString(2, visitor.getLastName());
+		statement.setString(3, visitor.getUserName());
+		//statement.setString(4, visitor.getPassword());
+		statement.setString(4, visitor.getEmail());
+		statement.setString(5, visitor.getPhoneNumber());
+		statement.setString(6, visitor.getAddress());
+		statement.setInt(7, visitor.getVisitorId());
+
+		int status = statement.executeUpdate();
+		log.info("Updating visitor details in Database for Visitor ID :"+ visitor.getVisitorId());
+		FERSDataConnection.closeConnection();
+		return status;
+	}
+	
+	/**
+	 * 
+	 * @param visitor
+	 * @return
+	 * @throws FERSGenericException 
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 */
+	public int changePassword(Visitor visitor) throws ClassNotFoundException, SQLException {
+		int status = -1;
+		
+		try{
+			connection = FERSDataConnection.createConnection();
+			
+		 if(connection!=null){			
+			if(visitor!=null){
+				
+				if(matchWithOldPwd(visitor, connection)){
+					status = -10;
+				}else{
+					statement = connection.prepareStatement(query.getChangePWDQuery());
+					statement.setString(1, visitor.getPassword());
+					statement.setInt(2, visitor.getVisitorId());
+			
+					status = statement.executeUpdate();
+					
+					log.info("Updating visitor details in Database for Visitor ID :" + visitor.getVisitorId());
+				}	
+			}else{
+				log.error("Visitor details are invalid");
+			}
+		 }else{
+			 throw new SQLException("Connection Error, could not establish connection with database");
+		 }
+		}finally{
+			if(statement!=null)
+				statement.close();
+			if(connection!=null)
+				FERSDataConnection.closeConnection();
+		}			
+		return status;
+	}
+
+	private boolean matchWithOldPwd(Visitor visitor, Connection connection2) throws SQLException{
+		String currentPWD = "";				
+			
+		try{
+			statement = connection.prepareStatement(query.getVerifyPWDQuery());								
+			statement.setInt(1, visitor.getVisitorId());
+	
+			resultSet = statement.executeQuery();
+			if(resultSet.next())
+				currentPWD = resultSet.getString("password");
+			
+			if(currentPWD.equalsIgnoreCase(visitor.getPassword())){
+				log.info("New password must be different from previous password, please choose a different password");
+				return true;
+			}
+			
+		}finally{
+			if(statement!=null)
+				statement.close();			
+		}			
+		return false;	
+	}
+
+	/**
+	 *  <br/>
+	 *  METHOD DESCRIPTION: <br/>
+	 *  DAO method to unregister a visitor from an event that the
+	 *  visitor registered for previously <br/>
+	 *  
+	 *  PSEUDO-CODE: <br/>
+	 *     Create a connection to the database <br/>
+	 *     Prepare a statement object using the connection: that deletes the   
+	 *       visitor, event, and session IDs into the EVENTSESSIONSIGNUP table <br/>
+	 *     Execute the query to perform the update <br/>
+     *
+	 *  @return void
+	 *  
+	 *  @param  visitor
+	 *  @param  eventid
+	 *  @param  eventsessionid
+	 *  
+	 *  @throws ClassNotFoundException
+	 *  @throws SQLException
+	 *  @throws Exception
+	 *  
+	 */
+	public void unregisterEvent(Visitor visitor, int eventid, int eventsessionid)throws ClassNotFoundException, SQLException, Exception {
+		
+		connection = FERSDataConnection.createConnection();
+		statement = connection.prepareStatement(query.getDeleteEventQuery());
+		statement.setInt(3, eventid);
+		statement.setInt(1, eventsessionid);
+		statement.setInt(2, visitor.getVisitorId());
+		int status = statement.executeUpdate();
+		if (status <= 0)
+			throw new FERSGenericException("Records not updated properly", new Exception());
+		log.info("unregistering event in Database for the visitor :" + visitor.getFirstName());
+		FERSDataConnection.closeConnection();
+	}
+		
+	}
+
+
+
