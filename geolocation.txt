@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>GeoLocation API Demo</title>
+<h1>Demo on GeoLocation API of HTML5</h1>
+<script type="text/javascript">
+var resultDiv;
+function showLocation() {
+	resultDiv=document.getElementById("result");
+	
+	if(navigator.geolocation){
+		
+		//alert("Your browser supports GeoLocation API");
+		/* Third parameter can be from below:
+		------------------------------------
+		enableHighAccuracy: for more accurate coordinates 
+		timeout: waiting time to pick the location default 0 max can be infinite
+		maximumAge: time to cache the retrived position
+		*/
+		navigator.geolocation.getCurrentPosition
+		(showCoordinates,error,{enableHighAccuracy:true,timeout:2000,maximumAge:10000});
+			
+	}
+	else{
+		resultDiv.innerHTML="Your browser doesn't support GeoLocation API";
+	}
+}
+function showCoordinates(position) {
+	resultDiv.innerHTML="Latitude :"+position.coords.latitude+"<br/>"+
+	"Longitude :"+position.coords.longitude;
+}
+
+function error() {
+	resultDiv.innerHTML="Unable to retrive your Location";	
+}
+</script>
+</head>
+<body>
+Below button when clicked. Pick your location coordinates
+<br/>
+<br/>
+<input type="button" value="Get Location" onclick="showLocation()">
+<br/><br/>
+<div id="result"></div>
+
+</body>
+</html>
