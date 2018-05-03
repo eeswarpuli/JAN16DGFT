@@ -1,1 +1,2 @@
 \\10.247.132.12.\GPDB7588_Training_Shared$\
+hi this is new
